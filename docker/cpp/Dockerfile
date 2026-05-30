@@ -1,11 +1,8 @@
 FROM gcc:12-bullseye
 
-RUN useradd -m -u 1000 -s /bin/bash compiler
 WORKDIR /code
 
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
-
-USER compiler
 
 ENTRYPOINT ["/bin/sh", "/run.sh"]

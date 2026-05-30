@@ -6,6 +6,72 @@ const logger = require('../utils/logger');
 const { TIMEOUTS, LIMITS } = require('../config/constants');
 
 const BASE_JOBS_DIR = process.env.JOBS_DIR || '/tmp/jobs';
+const IMAGE_PREFIX = 'compiler-';
+const imageBuildPromises = new Map();
+
+const getImageConfig = (language) => ({
+  imageName: `${IMAGE_PREFIX}${language}`,
+  dockerfileDir: path.resolve(__dirname, '..', '..', 'docker', language),
+});
+
+const buildDockerImage = async (language) => {
+  const { imageName, dockerfileDir } = getImageConfig(language);
+
+  logger.info(`Building Docker image for ${language}: ${imageName}`);
+
+  await new Promise((resolve, reject) => {
+    const buildProcess = spawn('docker', [
+      'build',
+      '-t', imageName,
+      dockerfileDir,
+    ]);
+
+    let stderr = '';
+
+    buildProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    buildProcess.on('error', reject);
+
+    buildProcess.on('close', (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      reject(new Error(`Failed to build Docker image ${imageName}: ${stderr.trim() || `exit code ${code}`}`));
+    });
+  });
+};
+
+const ensureDockerImage = async (language) => {
+  const { imageName } = getImageConfig(language);
+
+  try {
+    await new Promise((resolve, reject) => {
+      const inspectProcess = spawn('docker', ['image', 'inspect', imageName]);
+
+      inspectProcess.on('error', reject);
+      inspectProcess.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+
+        reject(new Error(`Image ${imageName} not found`));
+      });
+    });
+  } catch (error) {
+    if (!imageBuildPromises.has(language)) {
+      imageBuildPromises.set(language, buildDockerImage(language).finally(() => {
+        imageBuildPromises.delete(language);
+      }));
+    }
+
+    await imageBuildPromises.get(language);
+  }
+};
 
 // onSpawn(handles) is called synchronously after the Docker process starts,
 // with { writeStdin, closeStdin } — before execution completes.
@@ -36,6 +102,8 @@ const runCode = async (language, code, stdin, onStdout, onStderr, onSpawn, timeo
 
     const startTime = Date.now();
     const timeout = timeoutOverride ?? TIMEOUTS[language] ?? 10000;
+
+    await ensureDockerImage(language);
 
     // 4. Docker command
     const args = [
