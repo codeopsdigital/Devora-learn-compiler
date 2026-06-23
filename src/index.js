@@ -18,6 +18,23 @@ const server = http.createServer(app);
 // Connect to MongoDB
 connectDB();
 
+// Clean up stale jobs before starting worker
+(async () => {
+  const { codeExecutionQueue } = require('./services/queue.service');
+  logger.info('Cleaning up stale jobs from previous session...');
+  
+  // Remove all waiting/delayed jobs
+  await codeExecutionQueue.empty();
+  
+  // Clean up completed and failed jobs
+  await codeExecutionQueue.clean(0, 'completed');
+  await codeExecutionQueue.clean(0, 'failed');
+  await codeExecutionQueue.clean(0, 'delayed');
+  await codeExecutionQueue.clean(0, 'wait');
+  
+  logger.info('Stale jobs cleaned up successfully');
+})();
+
 // Initialize Worker Service
 processJobs();
 
@@ -36,10 +53,7 @@ app.use(express.json({ limit: '64kb' }));
 // 4. Morgan logging
 app.use(morgan('combined', { stream: { write: (message) => logger.info(message.trim()) } }));
 
-// 5. Global Rate Limiter
-app.use(globalRateLimiter);
-
-// 6. Routes
+// 5. Routes (rate limiters applied per-route, not globally)
 const executeRoutes = require('./routes/execute.routes');
 const jobRoutes = require('./routes/job.routes');
 

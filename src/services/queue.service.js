@@ -11,14 +11,10 @@ const codeExecutionQueue = new Bull(QUEUE_NAME, {
     db: redis.options.db,
   },
   defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 2000,
-    },
+    attempts: 1,
     timeout: 35000,
-    removeOnComplete: 100,
-    removeOnFail: 50,
+    removeOnComplete: true,
+    removeOnFail: true,
   },
 });
 
