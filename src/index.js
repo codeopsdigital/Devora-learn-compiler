@@ -43,7 +43,7 @@ processJobs();
 app.use(helmet());
 
 // 2. CORS
-const rawClientUrls = process.env.CLIENT_URL || 'http://localhost:3000';
+const rawClientUrls = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/^"|"$/g, '').replace(/^'|'$/g, '');
 const allowedOrigins = rawClientUrls.split(',').map(url => url.trim().replace(/\/$/, ''));
 
 app.use(cors({
@@ -80,7 +80,8 @@ app.get('/health', (req, res) => {
 app.use(errorHandler);
 
 // Initialize Socket.io
-socketService.init(server, process.env.CLIENT_URL || 'http://localhost:3000');
+const socketClientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+socketService.init(server, socketClientUrl);
 
 // Start Server
 const PORT = process.env.PORT || 5001;
