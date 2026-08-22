@@ -190,7 +190,6 @@ map $http_upgrade $connection_upgrade {
 # Upstream definition for backend application
 upstream compiler_backend {
     server 127.0.0.1:5001;
-    keepalive 32;
 }
 
 server {

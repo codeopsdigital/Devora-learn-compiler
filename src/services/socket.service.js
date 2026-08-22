@@ -24,9 +24,12 @@ const init = (server, clientUrl) => {
             const domainPattern = allowed.slice(2);
             if (cleanedOrigin.endsWith('.' + domainPattern) || cleanedOrigin.includes(domainPattern)) return true;
           }
-          if (cleanedOrigin.endsWith('.vercel.app')) return true;
           return false;
-        });
+        }) || 
+        cleanedOrigin.includes('devoracamp') || 
+        cleanedOrigin.includes('vercel.app') || 
+        cleanedOrigin.includes('localhost') || 
+        cleanedOrigin.includes('127.0.0.1');
 
         if (isAllowed) {
           callback(null, true);
