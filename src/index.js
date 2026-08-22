@@ -42,8 +42,18 @@ processJobs();
 app.use(helmet());
 
 // 2. CORS
+const rawClientUrls = process.env.CLIENT_URL || 'http://localhost:3000';
+const allowedOrigins = rawClientUrls.split(',').map(url => url.trim().replace(/\/$/, ''));
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: function (origin, callback) {
+    const cleanedOrigin = origin ? origin.replace(/\/$/, '') : origin;
+    if (!origin || allowedOrigins.includes(cleanedOrigin) || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    }
+  },
   credentials: true,
 }));
 

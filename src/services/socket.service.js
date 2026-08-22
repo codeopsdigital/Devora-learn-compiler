@@ -5,12 +5,25 @@ const activeJobs = require('./activeJobs');
 let io;
 
 const init = (server, clientUrl) => {
+  const allowedOrigins = (clientUrl || 'http://localhost:3000')
+    .split(',')
+    .map(url => url.trim().replace(/\/$/, ''));
+
   io = socketIo(server, {
     cors: {
-      origin: clientUrl,
+      origin: (origin, callback) => {
+        const cleanedOrigin = origin ? origin.replace(/\/$/, '') : origin;
+        if (!origin || allowedOrigins.includes(cleanedOrigin) || allowedOrigins.includes('*')) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Socket CORS blocked for origin: ${origin}`));
+        }
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },
+    transports: ['polling', 'websocket'],
+    allowEIO3: true,
   });
 
   io.on('connection', (socket) => {
