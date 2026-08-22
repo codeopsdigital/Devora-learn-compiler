@@ -1,15 +1,10 @@
 const Bull = require('bull');
 const { QUEUE_NAME } = require('../config/constants');
-const redis = require('../config/redis');
 const logger = require('../utils/logger');
 
-const codeExecutionQueue = new Bull(QUEUE_NAME, {
-  redis: {
-    port: redis.options.port,
-    host: redis.options.host,
-    password: redis.options.password,
-    db: redis.options.db,
-  },
+const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+
+const codeExecutionQueue = new Bull(QUEUE_NAME, REDIS_URL, {
   defaultJobOptions: {
     attempts: 1,
     timeout: 35000,
@@ -19,7 +14,9 @@ const codeExecutionQueue = new Bull(QUEUE_NAME, {
 });
 
 codeExecutionQueue.on('error', (err) => {
-  logger.error('Bull Queue Error:', err);
+  if (err.code !== 'EAI_AGAIN') {
+    logger.error('Bull Queue Error:', err.message || err);
+  }
 });
 
 const addJob = async (jobData) => {
