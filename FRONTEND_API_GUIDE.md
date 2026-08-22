@@ -185,10 +185,11 @@ socket.emit("join:job", jobId);
 ### Full Frontend Integration Example
 
 ```javascript
-import { io } from "socket.io-client";
-
-const BASE_URL = "http://localhost:5001";
-const socket = io(BASE_URL);
+const BASE_URL = process.env.NEXT_PUBLIC_COMPILER_API_URL || "https://devoracamp.duckdns.org";
+const socket = io(BASE_URL, {
+  transports: ["polling", "websocket"],
+  withCredentials: true,
+});
 
 async function runCode(language, code, stdin = "") {
   // 1. Submit the job

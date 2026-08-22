@@ -7,8 +7,9 @@ let io;
 const init = (server) => {
   io = socketIo(server, {
     cors: {
-      origin: '*',
+      origin: (origin, callback) => callback(null, origin || true),
       methods: ['GET', 'POST'],
+      credentials: true,
     },
     transports: ['polling', 'websocket'],
     allowEIO3: true,
