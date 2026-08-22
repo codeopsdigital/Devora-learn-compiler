@@ -44,15 +44,28 @@ app.use(helmet());
 
 // 2. CORS
 const rawClientUrls = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/^"|"$/g, '').replace(/^'|'$/g, '');
-const allowedOrigins = rawClientUrls.split(',').map(url => url.trim().replace(/\/$/, ''));
+const allowedOrigins = rawClientUrls.split(',').map(url => url.trim().replace(/\/$/, '')).filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
-    const cleanedOrigin = origin ? origin.replace(/\/$/, '') : origin;
-    if (!origin || allowedOrigins.includes(cleanedOrigin) || allowedOrigins.includes('*')) {
+    if (!origin) return callback(null, true);
+    const cleanedOrigin = origin.replace(/\/$/, '');
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed === '*') return true;
+      if (allowed === cleanedOrigin) return true;
+      if (allowed.startsWith('*.')) {
+        const domainPattern = allowed.slice(2);
+        if (cleanedOrigin.endsWith('.' + domainPattern) || cleanedOrigin.includes(domainPattern)) return true;
+      }
+      if (cleanedOrigin.endsWith('.vercel.app')) return true;
+      return false;
+    });
+
+    if (isAllowed) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS blocked for origin: ${origin}`));
+      logger.warn(`CORS blocked for origin: ${origin}`);
+      callback(null, false);
     }
   },
   credentials: true,

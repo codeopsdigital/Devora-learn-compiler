@@ -34,4 +34,6 @@ services:
       - REDIS_URL=redis://redis:6379
       - CLIENT_URL=${CLIENT_URL:-http://localhost:3000}
       - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-5}
+      - JOBS_DIR=/tmp/jobs
+      - NODE_ENV=production
     restart: always

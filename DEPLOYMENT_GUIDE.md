@@ -181,6 +181,12 @@ sudo nano /etc/nginx/sites-available/compiler-backend
 Add the following configuration:
 
 ```nginx
+# Map for handling WebSocket upgrades cleanly (Required for Socket.IO polling + WebSockets)
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
 # Upstream definition for backend application
 upstream compiler_backend {
     server 127.0.0.1:5001;
@@ -228,13 +234,13 @@ server {
     }
 
     # Socket.IO Real-Time WebSockets Proxy
-    location /socket.io/ {
-        proxy_pass http://compiler_backend/socket.io/;
+    location /socket.io {
+        proxy_pass http://compiler_backend;
         proxy_http_version 1.1;
 
         # Mandatory headers for WebSocket handshake upgrade
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
+        proxy_set_header Connection $connection_upgrade;
 
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

@@ -5,18 +5,34 @@ const activeJobs = require('./activeJobs');
 let io;
 
 const init = (server, clientUrl) => {
-  const allowedOrigins = (clientUrl || 'http://localhost:3000')
+  const rawClientUrls = (clientUrl || 'http://localhost:3000').replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+  const allowedOrigins = rawClientUrls
     .split(',')
-    .map(url => url.trim().replace(/\/$/, ''));
+    .map(url => url.trim().replace(/\/$/, ''))
+    .filter(Boolean);
 
   io = socketIo(server, {
     cors: {
       origin: (origin, callback) => {
-        const cleanedOrigin = origin ? origin.replace(/\/$/, '') : origin;
-        if (!origin || allowedOrigins.includes(cleanedOrigin) || allowedOrigins.includes('*')) {
+        if (!origin) return callback(null, true);
+        const cleanedOrigin = origin.replace(/\/$/, '');
+
+        const isAllowed = allowedOrigins.some(allowed => {
+          if (allowed === '*') return true;
+          if (allowed === cleanedOrigin) return true;
+          if (allowed.startsWith('*.')) {
+            const domainPattern = allowed.slice(2);
+            if (cleanedOrigin.endsWith('.' + domainPattern) || cleanedOrigin.includes(domainPattern)) return true;
+          }
+          if (cleanedOrigin.endsWith('.vercel.app')) return true;
+          return false;
+        });
+
+        if (isAllowed) {
           callback(null, true);
         } else {
-          callback(new Error(`Socket CORS blocked for origin: ${origin}`));
+          logger.warn(`Socket CORS blocked for origin: ${origin}`);
+          callback(null, false);
         }
       },
       methods: ['GET', 'POST'],
@@ -24,26 +40,33 @@ const init = (server, clientUrl) => {
     },
     transports: ['polling', 'websocket'],
     allowEIO3: true,
+    pingTimeout: 60000,
+    pingInterval: 25000,
   });
 
   io.on('connection', (socket) => {
     logger.info(`Socket connected: ${socket.id}`);
 
-    socket.on('join:job', (jobId) => {
-      socket.join(`job:${jobId}`);
-      logger.info(`Socket ${socket.id} joined room job:${jobId}`);
+    socket.on('join:job', (payload) => {
+      const jobId = typeof payload === 'object' && payload?.jobId ? payload.jobId : payload;
+      if (jobId) {
+        socket.join(`job:${jobId}`);
+        logger.info(`Socket ${socket.id} joined room job:${jobId}`);
+      }
     });
 
-    socket.on('job:stdin', ({ jobId, data }) => {
+    socket.on('job:stdin', (payload) => {
+      const { jobId, data } = (typeof payload === 'object' && payload !== null) ? payload : {};
       const job = activeJobs.get(jobId);
       if (job) {
-        job.writeStdin(data + '\n');
+        job.writeStdin((data || '') + '\n');
       } else {
         logger.warn(`job:stdin received for unknown or finished job: ${jobId}`);
       }
     });
 
-    socket.on('job:stdin:close', ({ jobId }) => {
+    socket.on('job:stdin:close', (payload) => {
+      const jobId = typeof payload === 'object' && payload?.jobId ? payload.jobId : payload;
       const job = activeJobs.get(jobId);
       if (job) {
         job.closeStdin();
