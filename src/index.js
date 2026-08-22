@@ -40,7 +40,10 @@ connectDB();
 processJobs();
 
 // 1. Helmet
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
 
 // 2. CORS
 app.use(cors({
