@@ -181,6 +181,12 @@ sudo nano /etc/nginx/sites-available/compiler-backend
 Add the following configuration:
 
 ```nginx
+# Map for handling WebSocket upgrades cleanly
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
 server {
     listen 80;
     server_name compiler-api.yourdomain.com; # Replace with your domain or server IP
@@ -221,14 +227,37 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
     }
 
-    # Socket.IO Real-Time WebSockets Proxy
+    # Socket.IO Real-Time WebSockets Proxy (with trailing slash)
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:5001;
+        proxy_http_version 1.1;
+
+        # Mandatory headers for WebSocket handshake upgrade
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Disable buffering for real-time WebSocket streaming
+        proxy_buffering off;
+        proxy_cache off;
+
+        # Extended timeouts for active streaming sockets
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+
+    # Socket.IO Real-Time WebSockets Proxy (without trailing slash)
     location /socket.io {
         proxy_pass http://127.0.0.1:5001;
         proxy_http_version 1.1;
 
         # Mandatory headers for WebSocket handshake upgrade
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $http_connection;
+        proxy_set_header Connection $connection_upgrade;
 
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

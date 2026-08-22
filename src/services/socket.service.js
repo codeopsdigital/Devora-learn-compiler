@@ -7,9 +7,8 @@ let io;
 const init = (server) => {
   io = socketIo(server, {
     cors: {
-      origin: (origin, callback) => callback(null, true),
+      origin: '*',
       methods: ['GET', 'POST'],
-      credentials: true,
     },
     transports: ['polling', 'websocket'],
     allowEIO3: true,
@@ -17,8 +16,17 @@ const init = (server) => {
     pingInterval: 25000,
   });
 
+  // Detailed logging for engine.io connection handshakes and errors
+  io.engine.on('headers', (headers, req) => {
+    logger.info(`Engine.IO handshake request: ${req.method} ${req.url} from origin: ${req.headers.origin || 'none'}`);
+  });
+
+  io.engine.on('connection_error', (err) => {
+    logger.error(`Engine.IO connection error: ${err.code} - ${err.message} (context: ${JSON.stringify(err.context || {})})`);
+  });
+
   io.on('connection', (socket) => {
-    logger.info(`Socket connected: ${socket.id}`);
+    logger.info(`Socket connected successfully: ${socket.id}`);
 
     socket.on('join:job', (payload) => {
       const jobId = typeof payload === 'object' && payload?.jobId ? payload.jobId : payload;
@@ -48,8 +56,8 @@ const init = (server) => {
       }
     });
 
-    socket.on('disconnect', () => {
-      logger.info(`Socket disconnected: ${socket.id}`);
+    socket.on('disconnect', (reason) => {
+      logger.info(`Socket disconnected: ${socket.id} (reason: ${reason})`);
     });
   });
 
