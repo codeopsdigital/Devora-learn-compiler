@@ -43,34 +43,8 @@ processJobs();
 app.use(helmet());
 
 // 2. CORS
-const rawClientUrls = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/^"|"$/g, '').replace(/^'|'$/g, '');
-const allowedOrigins = rawClientUrls.split(',').map(url => url.trim().replace(/\/$/, '')).filter(Boolean);
-
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    const cleanedOrigin = origin.replace(/\/$/, '');
-    const isAllowed = allowedOrigins.some(allowed => {
-      if (allowed === '*') return true;
-      if (allowed === cleanedOrigin) return true;
-      if (allowed.startsWith('*.')) {
-        const domainPattern = allowed.slice(2);
-        if (cleanedOrigin.endsWith('.' + domainPattern) || cleanedOrigin.includes(domainPattern)) return true;
-      }
-      return false;
-    }) || 
-    cleanedOrigin.includes('devoracamp') || 
-    cleanedOrigin.includes('vercel.app') || 
-    cleanedOrigin.includes('localhost') || 
-    cleanedOrigin.includes('127.0.0.1');
-
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      logger.warn(`CORS blocked for origin: ${origin}`);
-      callback(null, false);
-    }
-  },
+  origin: true,
   credentials: true,
 }));
 
@@ -96,8 +70,7 @@ app.get('/health', (req, res) => {
 app.use(errorHandler);
 
 // Initialize Socket.io
-const socketClientUrl = (process.env.CLIENT_URL || 'http://localhost:3000').replace(/^"|"$/g, '').replace(/^'|'$/g, '');
-socketService.init(server, socketClientUrl);
+socketService.init(server);
 
 // Start Server
 const PORT = process.env.PORT || 5001;

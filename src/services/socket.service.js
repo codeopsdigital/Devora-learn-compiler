@@ -4,40 +4,10 @@ const activeJobs = require('./activeJobs');
 
 let io;
 
-const init = (server, clientUrl) => {
-  const rawClientUrls = (clientUrl || 'http://localhost:3000').replace(/^"|"$/g, '').replace(/^'|'$/g, '');
-  const allowedOrigins = rawClientUrls
-    .split(',')
-    .map(url => url.trim().replace(/\/$/, ''))
-    .filter(Boolean);
-
+const init = (server) => {
   io = socketIo(server, {
     cors: {
-      origin: (origin, callback) => {
-        if (!origin) return callback(null, true);
-        const cleanedOrigin = origin.replace(/\/$/, '');
-
-        const isAllowed = allowedOrigins.some(allowed => {
-          if (allowed === '*') return true;
-          if (allowed === cleanedOrigin) return true;
-          if (allowed.startsWith('*.')) {
-            const domainPattern = allowed.slice(2);
-            if (cleanedOrigin.endsWith('.' + domainPattern) || cleanedOrigin.includes(domainPattern)) return true;
-          }
-          return false;
-        }) || 
-        cleanedOrigin.includes('devoracamp') || 
-        cleanedOrigin.includes('vercel.app') || 
-        cleanedOrigin.includes('localhost') || 
-        cleanedOrigin.includes('127.0.0.1');
-
-        if (isAllowed) {
-          callback(null, true);
-        } else {
-          logger.warn(`Socket CORS blocked for origin: ${origin}`);
-          callback(null, false);
-        }
-      },
+      origin: true,
       methods: ['GET', 'POST'],
       credentials: true,
     },
