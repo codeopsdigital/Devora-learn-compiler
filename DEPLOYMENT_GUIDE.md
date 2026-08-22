@@ -229,7 +229,7 @@ server {
 
     # Socket.IO Real-Time WebSockets Proxy (with trailing slash)
     location /socket.io/ {
-        proxy_pass http://127.0.0.1:5001;
+        proxy_pass http://127.0.0.1:5001/socket.io/;
         proxy_http_version 1.1;
 
         # Mandatory headers for WebSocket handshake upgrade
@@ -251,8 +251,8 @@ server {
     }
 
     # Socket.IO Real-Time WebSockets Proxy (without trailing slash)
-    location /socket.io {
-        proxy_pass http://127.0.0.1:5001;
+    location = /socket.io {
+        proxy_pass http://127.0.0.1:5001/socket.io;
         proxy_http_version 1.1;
 
         # Mandatory headers for WebSocket handshake upgrade
