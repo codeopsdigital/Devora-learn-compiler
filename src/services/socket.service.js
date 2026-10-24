@@ -1,6 +1,7 @@
 const socketIo = require('socket.io');
 const logger = require('../utils/logger');
 const activeJobs = require('./activeJobs');
+const linuxService = require('./linux.service');
 
 let io;
 
@@ -28,6 +29,7 @@ const init = (server) => {
 
   io.on('connection', (socket) => {
     logger.info(`Socket connected successfully: ${socket.id}`);
+    linuxService.register(socket);
 
     socket.on('join:job', (payload) => {
       const jobId = typeof payload === 'object' && payload?.jobId ? payload.jobId : payload;

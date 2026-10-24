@@ -74,6 +74,7 @@ app.use(errorHandler);
 
 // Initialize Socket.io
 socketService.init(server);
+require('./services/linux.service').sweep();
 
 // Start Server
 const PORT = process.env.PORT || 5001;
