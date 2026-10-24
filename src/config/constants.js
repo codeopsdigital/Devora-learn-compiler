@@ -5,7 +5,7 @@ module.exports = {
     python: 10000,
     go: 10000,
     rust: 15000,
-    java: 15000,
+    java: 30000,
   },
   LIMITS: {
     MAX_CODE_SIZE: 65536,
